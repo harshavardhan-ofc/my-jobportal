@@ -33,3 +33,4 @@ build/
 .vscode/
 #ignoring app.prop while pushing our code to github
 src/main/resources/application.properties
+src/main/resources/application.yml
