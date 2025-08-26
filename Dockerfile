@@ -1,31 +1,21 @@
-# Use official Maven image with Java 17 to build the project
-FROM maven:3.9.10-openjdk-21 AS build
+# Use Maven with Java 21 to build the project
+FROM maven:3.9.9-eclipse-temurin-21 AS build
 
 # Set working directory inside the container
 WORKDIR /app
 
-# Copy the pom.xml and download dependencies (will be cached if unchanged)
+# Copy pom.xml and download dependencies
 COPY pom.xml .
-
 RUN mvn dependency:go-offline
 
-# Copy the source code to the container
+# Copy source code
 COPY src ./src
 
-# Package the application (skip tests for faster build)
+# Package the application
 RUN mvn clean package -DskipTests
 
-# Use a lightweight OpenJDK 21 image for the runtime
+# Run with a lightweight JDK
 FROM eclipse-temurin:21-jdk-alpine
-
-# Set working directory
 WORKDIR /app
-
-# Copy the jar file from the build stage
 COPY --from=build /app/target/*.jar app.jar
-
-# Expose the port your Spring Boot app runs on (usually 8080)
-EXPOSE 8080
-
-# Command to run the jar file
 ENTRYPOINT ["java","-jar","app.jar"]
