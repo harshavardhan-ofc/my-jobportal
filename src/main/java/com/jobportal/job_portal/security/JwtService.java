@@ -39,6 +39,10 @@ public class JwtService {
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
+    public String extractUserRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
 
     public <T> T extractClaim(String token, Function<Claims, T> resolver) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build()

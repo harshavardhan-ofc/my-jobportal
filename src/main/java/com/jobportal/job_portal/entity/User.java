@@ -1,5 +1,6 @@
 package com.jobportal.job_portal.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,8 +27,10 @@ public class User {
     private String role; // APPLICANT or RECRUITER
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @Column(nullable = false, unique = true)
+    @JsonIgnore
     private String username;
 }
