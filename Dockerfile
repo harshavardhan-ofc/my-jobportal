@@ -1,57 +1,40 @@
-name: Build and Push Docker Image to ECR
+# ============================
+# Stage 1: Build with Maven (Java 21)
+# ============================
+FROM maven:3.9.9-eclipse-temurin-21 AS build
 
-on:
-  push:
-    branches:
-      - main
+WORKDIR /app
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-    env:
-      # Environment variables loaded from GitHub Secrets
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+# Copy source code
+COPY src ./src
 
-      # Application secrets
-      APP_JWT_SECRET: ${{ secrets.APP_JWT_SECRET }}
-      APP_JWT_EXPIRATION_MS: ${{ secrets.APP_JWT_EXPIRATION_MS }}
+# Package the application, skipping tests
+RUN mvn clean package -DskipTests
 
-      # Database secrets
-      SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
-      SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
-      SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+# ============================
+# Stage 2: Run lightweight JDK (Java 21)
+# ============================
+FROM eclipse-temurin:21-jdk-alpine
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+WORKDIR /app
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+# Copy the packaged JAR file from the build stage
+COPY --from=build /app/target/*.jar app.jar
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+# Set environment variables with default values,
+# these can be overridden at runtime or by CI/CD pipelines.
+ENV SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/jobportal \
+    SPRING_DATASOURCE_USERNAME=postgres \
+    SPRING_DATASOURCE_PASSWORD=password \
+    APP_JWT_SECRET=defaultsecretreplaceinprod1234567890abcdefghijk \
+    APP_JWT_EXPIRATION_MS=3600000
 
-      - name: Build Docker image
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          docker build \
-            --build-arg SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL}" \
-            --build-arg SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME}" \
-            --build-arg SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD}" \
-            --build-arg APP_JWT_SECRET="${APP_JWT_SECRET}" \
-            --build-arg APP_JWT_EXPIRATION_MS="${APP_JWT_EXPIRATION_MS}" \
-            -t "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:$IMAGE_TAG" .
+# Expose port 8080
+EXPOSE 8080
 
-      - name: Push Docker image to ECR
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          docker push "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:$IMAGE_TAG"
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
