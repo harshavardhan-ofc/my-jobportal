@@ -43,7 +43,7 @@ jobs:
             --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
             --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
             --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
-            --build-arg APP_JWT_SECRET="Jx8RZ6nP0qWlG1vM4yTnU7oQ2rBfH3kE9mLsA4cV8jYdK2xP7uFqN0tG5zM1rX8y" \
+            --build-arg APP_JWT_SECRET="UKYx3bC/4PkUcJ2K7dEtY0XqqkCiMfkbrrWCr66pPhQ= \
             --build-arg JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }} \
             -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
 
