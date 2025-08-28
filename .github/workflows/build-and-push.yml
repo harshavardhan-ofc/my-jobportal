@@ -41,7 +41,7 @@ jobs:
           IMAGE_TAG=${GITHUB_SHA::8}
           docker build \
             --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
-            --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_US }} \
+            --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
             --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
             --build-arg APP_JWT_SECRET=${{ secrets.APP_JWT_SECRET }} \
             --build-arg JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }} \
