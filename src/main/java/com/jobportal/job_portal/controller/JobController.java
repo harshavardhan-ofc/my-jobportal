@@ -16,8 +16,8 @@ public class JobController {
 
     private final JobService jobService;
 
-    @PreAuthorize("hasRole('RECRUITER')")
-    @GetMapping
+//    @PreAuthorize("hasRole('APPLICANT')")
+    @GetMapping("/All")
     public ResponseEntity<List<JobDto>> getAllJobs() {
         return ResponseEntity.ok(jobService.getAllJobs());
     }
