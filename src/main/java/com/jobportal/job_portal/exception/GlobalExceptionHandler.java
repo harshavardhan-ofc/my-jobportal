@@ -10,7 +10,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleAllExceptions(Exception ex) {
-        ex.printStackTrace(); // This will print the full error to console
+        ex.printStackTrace();
         return ResponseEntity.status(500).body("Error: " + ex.getMessage());
     }
 }
