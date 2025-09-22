@@ -76,7 +76,6 @@ public class S3Service {
 
     private final S3Client s3Client;
 
-    // Constructor injection → Spring will inject the S3Client bean
     public S3Service(S3Client s3Client) {
         this.s3Client = s3Client;
     }

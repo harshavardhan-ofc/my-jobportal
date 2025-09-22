@@ -1,5 +1,6 @@
 package com.jobportal.job_portal.controller;
 
+import com.jobportal.job_portal.aspect.NotifyOnSuccess;
 import com.jobportal.job_portal.dto.*;
 import com.jobportal.job_portal.entity.User;
 import com.jobportal.job_portal.repository.UserRepository;
@@ -23,6 +24,7 @@ public class AuthController {
     private final JwtService jwt;
 
     @PostMapping("/register")
+    @NotifyOnSuccess(message = "Registration Successful")
     public ResponseEntity<String> register(@RequestBody RegisterRequest req) {
         if (users.existsByEmail(req.getEmail())) {
             return ResponseEntity.badRequest().body("Email already exists");

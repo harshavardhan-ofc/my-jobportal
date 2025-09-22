@@ -14,7 +14,7 @@ public class FileUploadController {
 
     @PostMapping("/upload")
     public String uploadFile(@RequestParam("file") MultipartFile file) throws Exception {
-        String bucketName = "my-jobportal-12345";  // Replace with your actual S3 bucket name
+        String bucketName = "my-jb-bucket";
         String key = s3Service.uploadFile(file, bucketName);
         return "File uploaded to S3! S3 key: " + key;
     }
