@@ -258,23 +258,6 @@ jobs:
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
             | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-      - name: Build Docker image
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          echo "Building Docker image with tag: $IMAGE_TAG"
-          docker build \
-            --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
-            --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
-            --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
-            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG \
-            .
-
-      - name: Push Docker image
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::8}
-          echo "Pushing Docker image with tag: $IMAGE_TAG"
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
         env:
@@ -287,11 +270,13 @@ jobs:
           DB_URL: ${{ secrets.DB_URL }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION_MS: ${{ secrets.JWT_EXPIRATION_MS }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,IMAGE_TAG,AWS_ACCOUNT_ID,ECR_REPOSITORY,DB_URL,DB_USERNAME,DB_PASSWORD
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,IMAGE_TAG,AWS_ACCOUNT_ID,ECR_REPOSITORY,DB_URL,DB_USERNAME,DB_PASSWORD,JWT_SECRET,JWT_EXPIRATION_MS
           script: |
             IMAGE_TAG_SHORT=$(echo $IMAGE_TAG | cut -c1-8)
             echo "Deploying image with tag: $IMAGE_TAG_SHORT"
@@ -307,11 +292,13 @@ jobs:
             docker stop job-portal-repo 2>/dev/null || true
             docker rm job-portal-repo 2>/dev/null || true
 
-            echo "Starting new container with DB credentials..."
+            echo "Starting new container with DB and JWT credentials..."
             docker run -d --name job-portal-repo -p 8080:8080 \
-              -e SPRING_DATASOURCE_URL=$DB_URL \
-              -e SPRING_DATASOURCE_USERNAME=$DB_USERNAME \
-              -e SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD \
+              -e SPRING_DATASOURCE_URL=jdbc:postgresql://db-jp.c614682yikqe.us-east-1.rds.amazonaws.com:5432/postgres
+              -e SPRING_DATASOURCE_USERNAME=postgres
+              -e SPRING_DATASOURCE_PASSWORD=Harsha123
+              -e APP_JWT_SECRET=hhwGSkD8rpHx8tLhGlkZmMbohy4ELLFuChRlLm3xDlM=
+              -e APP_JWT_EXPIRATION_MS=3600000
               $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG_SHORT
 
             echo "Deployment complete!"
