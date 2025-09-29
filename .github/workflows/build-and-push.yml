@@ -310,9 +310,9 @@ jobs:
 
 
             # Run the new container
-            docker run -d --name job-portal-repo -p 8080:8080 \
-            -e APP_JWT_SECRET=${{ secrets.APP_JWT_SECRET }} \
-            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG_SHORT
+                    docker run -d --name job-portal-repo -p 8080:8080 \
+                      -e APP_JWT_SECRET=${{ secrets.APP_JWT_SECRET }} \
+                      $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG_SHORT
                     
                     #            echo "Starting new container..."
 #            docker run -d --name job-portal-repo -p 8080:8080 \
