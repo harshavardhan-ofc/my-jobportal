@@ -131,4 +131,4 @@ jobs:
 
             # Run the new container
             docker run -d --name job-portal -p 8080:8080 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-#      tested succesfully
+#      tested
