@@ -50,90 +50,7 @@
 #          IMAGE_TAG=${GITHUB_SHA::8}
 #          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 #=========================================================================================================================
-#name: Build and Push Docker Image to ECR
-#
-#on:
-#  push:
-#    branches:
-#      - main
-#
-#env:
-#  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-#
-#jobs:
-#  build-and-push:
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Checkout source
-#        uses: actions/checkout@v4
-#
-#      - name: Set up JDK 21
-#        uses: actions/setup-java@v4
-#        with:
-#          distribution: 'temurin'
-#          java-version: '21'
-#
-#      - name: Build with Maven
-#        run: mvn clean package --no-transfer-progress -DskipTests
-#
-#      - name: Configure AWS credentials
-#        uses: aws-actions/configure-aws-credentials@v2
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: ${{ secrets.AWS_REGION }}
-#
-#      - name: Login to Amazon ECR
-#        run: |
-#          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-#            | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-#
-#      - name: Build Docker image
-#        run: |
-#          IMAGE_TAG=${GITHUB_SHA::8}
-#          echo "Building Docker image with tag: $IMAGE_TAG"
-#          docker build \
-#            --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
-#            --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
-#            --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
-#            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG \
-#            .
-#
-#      - name: Push Docker image
-#        run: |
-#          IMAGE_TAG=${GITHUB_SHA::8}
-#          echo "Pushing Docker image with tag: $IMAGE_TAG"
-#          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-#
-#      - name: Deploy to EC2
-#        uses: appleboy/ssh-action@v0.1.7
-#        with:
-#          host: ${{ secrets.EC2_HOST }}
-#          username: ${{ secrets.EC2_USER }}
-#          key: ${{ secrets.EC2_KEY }}
-#          script: |
-#
-#            export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-#            export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#            export AWS_REGION=${{ secrets.AWS_REGION }}
-#
-#            # Login to AWS ECR
-#            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-#              | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-#
-#            # Pull the new image
-#            IMAGE_TAG=${GITHUB_SHA::8}
-#            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-#
-#            # Stop & remove old container if running
-#            docker stop job-portal || true
-#            docker rm job-portal || true
-#
-#            # Run the new container
-#            docker run -d --name job-portal -p 8080:8080 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
-##      tested abc
-name: Build, Push Docker Image and Deploy to EC2
+name: Build and Push Docker Image to ECR
 
 on:
   push:
@@ -142,8 +59,6 @@ on:
 
 env:
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
   build-and-push:
@@ -171,32 +86,25 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION \
-            | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-      - name: Set IMAGE_TAG
-        run: |
-          if [ -z "$GITHUB_SHA" ]; then
-            echo "GITHUB_SHA is empty, using 'latest'"
-            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
-          else
-            IMAGE_TAG=${GITHUB_SHA::8}
-            echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          fi
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
       - name: Build Docker image
         run: |
+          IMAGE_TAG=${GITHUB_SHA::8}
           echo "Building Docker image with tag: $IMAGE_TAG"
           docker build \
             --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
             --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
             --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
-            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG \
+            .
 
       - name: Push Docker image
         run: |
+          IMAGE_TAG=${GITHUB_SHA::8}
           echo "Pushing Docker image with tag: $IMAGE_TAG"
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
@@ -205,26 +113,119 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
+
             export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
             export AWS_REGION=${{ secrets.AWS_REGION }}
 
             # Login to AWS ECR
-            aws ecr get-login-password --region $AWS_REGION \
-              | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+              | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
             # Pull the new image
             IMAGE_TAG=${GITHUB_SHA::8}
-            if [ -z "$IMAGE_TAG" ]; then
-              IMAGE_TAG=latest
-            fi
-            FULL_IMAGE=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-            echo "Pulling image $FULL_IMAGE"
-            docker pull $FULL_IMAGE
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
 
             # Stop & remove old container if running
-            docker stop job-portal || true
-            docker rm job-portal || true
+            docker stop job-portal-repo || true
+            docker rm job-portal-repo || true
 
             # Run the new container
-            docker run -d --name job-portal -p 8080:8080 $FULL_IMAGE
+            docker run -d --name job-portal-repo -p 8080:8080 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+#      tested abc
+#========================================================================================================================================
+#name: Build, Push Docker Image and Deploy to EC2
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#
+#env:
+#  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+#  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+#  AWS_REGION: ${{ secrets.AWS_REGION }}
+#
+#jobs:
+#  build-and-push:
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Checkout source
+#        uses: actions/checkout@v4
+#
+#      - name: Set up JDK 21
+#        uses: actions/setup-java@v4
+#        with:
+#          distribution: 'temurin'
+#          java-version: '21'
+#
+#      - name: Build with Maven
+#        run: mvn clean package --no-transfer-progress -DskipTests
+#
+#      - name: Configure AWS credentials
+#        uses: aws-actions/configure-aws-credentials@v2
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: ${{ secrets.AWS_REGION }}
+#
+#      - name: Login to Amazon ECR
+#        run: |
+#          aws ecr get-login-password --region $AWS_REGION \
+#            | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+#
+#      - name: Set IMAGE_TAG
+#        run: |
+#          if [ -z "$GITHUB_SHA" ]; then
+#            echo "GITHUB_SHA is empty, using 'latest'"
+#            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+#          else
+#            IMAGE_TAG=${GITHUB_SHA::8}
+#            echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+#          fi
+#
+#      - name: Build Docker image
+#        run: |
+#          echo "Building Docker image with tag: $IMAGE_TAG"
+#          docker build \
+#            --build-arg SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
+#            --build-arg SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
+#            --build-arg SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
+#            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+#
+#      - name: Push Docker image
+#        run: |
+#          echo "Pushing Docker image with tag: $IMAGE_TAG"
+#          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+#
+#      - name: Deploy to EC2
+#        uses: appleboy/ssh-action@v0.1.7
+#        with:
+#          host: ${{ secrets.EC2_HOST }}
+#          username: ${{ secrets.EC2_USER }}
+#          key: ${{ secrets.EC2_KEY }}
+#          script: |
+#            export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+#            export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#            export AWS_REGION=${{ secrets.AWS_REGION }}
+#
+#            # Login to AWS ECR
+#            aws ecr get-login-password --region $AWS_REGION \
+#              | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+#
+#            # Pull the new image
+#            IMAGE_TAG=${GITHUB_SHA::8}
+#            if [ -z "$IMAGE_TAG" ]; then
+#              IMAGE_TAG=latest
+#            fi
+#            FULL_IMAGE=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+#            echo "Pulling image $FULL_IMAGE"
+#            docker pull $FULL_IMAGE
+#
+#            # Stop & remove old container if running
+#            docker stop job-portal || true
+#            docker rm job-portal || true
+#
+#            # Run the new container
+#            docker run -d --name job-portal -p 8080:8080 $FULL_IMAGE
