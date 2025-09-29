@@ -284,34 +284,34 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,IMAGE_TAG,AWS_ACCOUNT_ID,ECR_REPOSITORY
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,IMAGE_TAG,AWS_ACCOUNT_ID,ECR_REPOSITORY,DB_URL,DB_USERNAME,DB_PASSWORD
           script: |
-            # Extract first 8 characters of the commit SHA
             IMAGE_TAG_SHORT=$(echo $IMAGE_TAG | cut -c1-8)
             echo "Deploying image with tag: $IMAGE_TAG_SHORT"
 
-            # Login to AWS ECR
             echo "Logging in to ECR..."
             aws ecr get-login-password --region $AWS_REGION \
               | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-            # Pull the new image
             echo "Pulling new image..."
             docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG_SHORT
 
-            # Stop & remove old container if running
             echo "Stopping old container..."
             docker stop job-portal-repo 2>/dev/null || true
             docker rm job-portal-repo 2>/dev/null || true
 
-            # Run the new container
-            echo "Starting new container..."
+            echo "Starting new container with DB credentials..."
             docker run -d --name job-portal-repo -p 8080:8080 \
-              -e APP_JWT_SECRET=${{ secrets.APP_JWT_SECRET }} \
+              -e SPRING_DATASOURCE_URL=$DB_URL \
+              -e SPRING_DATASOURCE_USERNAME=$DB_USERNAME \
+              -e SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD \
               $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG_SHORT
 
             echo "Deployment complete!"
